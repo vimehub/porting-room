@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Porting Room — Android Game Ports</title>
+<meta name="description" content="Porting Room — katalog game klasik yang di-porting ke Android & PC. Info port, video gameplay, dan unduhan gratis dari sumber resmi developer.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <h1>Porting Room</h1>
+    <p class="tagline">Classic Games. Reborn for Android &amp; PC.</p>
+    <p class="stats" id="stats">Memuat katalog…</p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="controls">
+    <input id="search" type="search" placeholder="Cari game…" autocomplete="off">
+    <div class="chips" id="platform-chips"></div>
+  </div>
+
+  <section id="sec-added" class="section">
+    <h2>Terakhir Ditambahkan</h2>
+    <div class="grid" id="last-added-list"></div>
+  </section>
+
+  <section id="sec-popular" class="section">
+    <h2>Populer</h2>
+    <p class="note">Urutan Populer: game dari sheet diurutkan menurut kunjungan, game katalog diurutkan menurut jumlah port.</p>
+    <div class="grid" id="popular-list"></div>
+  </section>
+
+  <section id="sec-updated" class="section">
+    <h2>Terakhir Diperbarui</h2>
+    <div class="grid" id="last-updated-list"></div>
+  </section>
+
+  <section id="sec-all" class="section">
+    <h2>Semua Game <span class="count" id="all-count"></span></h2>
+    <div class="grid" id="game-list"></div>
+    <p class="empty" id="no-results" hidden>Tidak ada game yang cocok.</p>
+  </section>
+</main>
+
+<div class="modal-backdrop" id="modal-backdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <button class="modal-close" id="modal-close" aria-label="Tutup">×</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<footer class="wrap foot">
+  <p>Files are downloaded from the developers' official sources. We do not host any files.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
