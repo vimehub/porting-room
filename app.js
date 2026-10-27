@@ -5,7 +5,11 @@ const $ = (id) => document.getElementById(id);
 
 let ALL = [];
 let activePlatform = "";
+let activeKind = "";
 let query = "";
+
+const KIND_LABELS = { games: "Game", emulators: "Emulator", apps: "Aplikasi", tools: "Perkakas" };
+function kindOf(g) { return KIND_LABELS[g.kind] ? g.kind : "games"; }
 
 function esc(s) {
   return String(s == null ? "" : s)
@@ -34,6 +38,12 @@ function portBadge(g) {
   return `<span class="badge muted">Belum ada port</span>`;
 }
 
+function kindBadge(g) {
+  const k = kindOf(g);
+  if (k === "games") return "";
+  return ` <span class="badge kind">${esc(KIND_LABELS[k])}</span>`;
+}
+
 function cardHtml(g) {
   const meta = [g.platform, g.year].filter(Boolean).join(" · ");
   return `<article class="card" data-slug="${esc(g.slug)}" tabindex="0">
@@ -41,7 +51,7 @@ function cardHtml(g) {
     <div class="card-body">
       <h3>${esc(g.name)}</h3>
       <p class="meta">${esc(meta)}</p>
-      ${portBadge(g)}
+      ${portBadge(g)}${kindBadge(g)}
     </div>
   </article>`;
 }
@@ -81,11 +91,16 @@ function openDetail(slug) {
   if (!g) return;
   const info = [
     ["Platform", g.platform],
+    ["Jenis", KIND_LABELS[kindOf(g)]],
     ["Tahun", g.year],
     ["Genre", g.genre],
     ["Tersedia di", (g.platforms || []).join(", ")],
     ["Jumlah Port", g.port_count],
+    ["Kebutuhan", g.needs],
   ].filter(([, v]) => v !== null && v !== undefined && v !== "");
+  const notice = !g.jailbreak ? "" : kindOf(g) === "games"
+    ? `<p class="notice"><strong>Hanya PS5 (Jailbreak).</strong> Butuh PS5 yang sudah di-jailbreak. Port ini tidak menyertakan file game — bawa file game sendiri yang diperoleh secara legal. Tidak ada file yang di-host di sini.</p>`
+    : `<p class="notice"><strong>Hanya PS5 (Jailbreak).</strong> Butuh PS5 yang sudah di-jailbreak. Tidak ada file yang di-host di sini.</p>`;
   const video = (g.videos && g.videos.length)
     ? `<h3>Video Gameplay</h3><div class="video"><iframe src="https://www.youtube.com/embed/${esc(g.videos[0])}" allowfullscreen referrerpolicy="no-referrer"></iframe></div>`
     : "";
@@ -100,6 +115,7 @@ function openDetail(slug) {
         <table class="info">${info.map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join("")}</table>
       </div>
     </div>
+    ${notice}
     ${descHtml(g.description)}
     <h3>Port Tersedia</h3>
     ${portsHtml(g)}
@@ -134,13 +150,34 @@ function renderPlatformChips() {
   });
 }
 
+function renderTypeChips() {
+  const counts = new Map();
+  ALL.forEach((g) => {
+    const k = kindOf(g);
+    counts.set(k, (counts.get(k) || 0) + 1);
+  });
+  const order = ["games", "emulators", "apps", "tools"];
+  const wrap = $("type-chips");
+  wrap.innerHTML = `<button class="chip on" data-k="">Semua Jenis</button>` +
+    order.filter((k) => counts.has(k)).map((k) => `<button class="chip" data-k="${k}">${esc(KIND_LABELS[k])} (${counts.get(k)})</button>`).join("");
+  wrap.querySelectorAll(".chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("on"));
+      btn.classList.add("on");
+      activeKind = btn.dataset.k;
+      applyFilter();
+    });
+  });
+}
+
 function applyFilter() {
-  const filtering = query !== "" || activePlatform !== "";
+  const filtering = query !== "" || activePlatform !== "" || activeKind !== "";
   ["sec-added", "sec-popular", "sec-updated"].forEach((id) => {
     $(id).style.display = filtering ? "none" : "";
   });
   const list = ALL.filter((g) => {
     if (activePlatform && (g.platform || "Others") !== activePlatform) return false;
+    if (activeKind && kindOf(g) !== activeKind) return false;
     if (query && !norm(g.name).includes(query)) return false;
     return true;
   });
@@ -169,8 +206,9 @@ async function main() {
   ALL = (data.games || []).sort(byName);
   const withPorts = ALL.filter((g) => g.port_count > 0).length;
   const totalPorts = ALL.reduce((n, g) => n + (g.port_count || 0), 0);
-  $("stats").textContent = `${ALL.length} Game · ${withPorts} dengan Port · ${totalPorts} Port · 100% Gratis`;
+  $("stats").textContent = `${ALL.length} Entri · ${withPorts} dengan Port · ${totalPorts} Port · 100% Gratis`;
   renderPlatformChips();
+  renderTypeChips();
   renderSections();
   applyFilter();
   $("search").addEventListener("input", (e) => {
