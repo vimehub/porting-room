@@ -106,6 +106,16 @@ body {
   border-radius: 999px;
 }
 .badge.muted { background: #e5e5e8; color: #666; }
+.badge.kind { background: #fff; color: #17171a; border: 1px solid #17171a; }
+.notice {
+  background: #ececf0;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0 0 4px 0;
+}
 .empty { color: #666; }
 .modal-backdrop {
   position: fixed;
