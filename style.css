@@ -50,18 +50,18 @@ body {
 .count { color: #666; font-size: 16px; }
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
 }
 @media (min-width: 560px) {
   .grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
   }
 }
 @media (min-width: 900px) {
   .grid {
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }
 }
 .card {
@@ -92,12 +92,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 64px;
+  font-size: clamp(28px, 10vw, 64px);
   font-weight: 700;
   color: #999;
 }
 .card-body { padding: 10px 12px 12px; }
-.card-body h3 { margin: 0 0 4px; font-size: 15px; line-height: 1.3; }
+.card-body h3 { margin: 0 0 4px; font-size: 14px; line-height: 1.3; }
 .meta { color: #666; font-size: 13px; margin: 0; }
 .badge {
   display: inline-block;
@@ -184,6 +184,10 @@ body {
 @media (max-width: 560px) {
   .detail-head { flex-direction: column; }
   .cover-lg { flex-basis: auto; max-width: 220px; }
+  .card-body { padding: 6px 8px 8px; }
+  .card-body h3 { font-size: 12px; }
+  .card-body .meta { display: none; }
+  .badge { font-size: 10px; padding: 2px 6px; margin-top: 6px; }
 }
 
 .more-btn {
@@ -199,3 +203,28 @@ body {
   color: #17171a;
 }
 .more-btn[hidden] { display: none; }
+
+.lang-toggle { display: flex; gap: 6px; justify-content: flex-end; margin-bottom: 8px; }
+.lang-btn {
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: transparent;
+  color: #fff;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.lang-btn.on { background: #fff; color: #17171a; border-color: #fff; }
+.vthumbs { display: flex; gap: 8px; margin-top: 8px; overflow-x: auto; padding-bottom: 4px; }
+.vthumb {
+  border: 0;
+  padding: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+  flex: 0 0 96px;
+  opacity: 0.65;
+}
+.vthumb.on { opacity: 1; outline: 2px solid #17171a; }
+.vthumb img { width: 96px; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
