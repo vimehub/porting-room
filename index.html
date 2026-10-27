@@ -11,8 +11,12 @@
 <body>
 <header class="top">
   <div class="wrap">
+    <div class="lang-toggle">
+      <button class="lang-btn" id="lang-id" data-lang="id">ID</button>
+      <button class="lang-btn" id="lang-en" data-lang="en">EN</button>
+    </div>
     <h1>Porting Room</h1>
-    <p class="tagline">Classic Games. Reborn for Android, PC &amp; PS5.</p>
+    <p class="tagline" id="tagline">Classic Games. Reborn for Android, PC &amp; PS5.</p>
     <p class="stats" id="stats">Memuat katalog…</p>
   </div>
 </header>
@@ -26,26 +30,26 @@
   </div>
 
   <section id="sec-added" class="section">
-    <h2>Terakhir Ditambahkan</h2>
+    <h2 id="h-added">Terakhir Ditambahkan</h2>
     <div class="grid" id="last-added-list"></div>
     <button class="more-btn" id="more-added" hidden></button>
   </section>
 
   <section id="sec-popular" class="section">
-    <h2>Populer</h2>
-    <p class="note">Urutan Populer: game dari sheet diurutkan menurut kunjungan, game katalog diurutkan menurut jumlah port.</p>
+    <h2 id="h-popular">Populer</h2>
+    <p class="note" id="popular-note">Urutan Populer: game dari sheet diurutkan menurut kunjungan, game katalog diurutkan menurut jumlah port.</p>
     <div class="grid" id="popular-list"></div>
     <button class="more-btn" id="more-popular" hidden></button>
   </section>
 
   <section id="sec-updated" class="section">
-    <h2>Terakhir Diperbarui</h2>
+    <h2 id="h-updated">Terakhir Diperbarui</h2>
     <div class="grid" id="last-updated-list"></div>
     <button class="more-btn" id="more-updated" hidden></button>
   </section>
 
   <section id="sec-all" class="section">
-    <h2>Semua Entri <span class="count" id="all-count"></span></h2>
+    <h2><span id="h-all-label">Semua Entri</span> <span class="count" id="all-count"></span></h2>
     <div class="grid" id="game-list"></div>
     <p class="empty" id="no-results" hidden>Tidak ada game yang cocok.</p>
   </section>
@@ -59,8 +63,8 @@
 </div>
 
 <footer class="wrap foot">
-  <p>Files are downloaded from the developers' official sources. We do not host any files.</p>
-  <p>PS5 entries require a jailbroken console and your own legally obtained game files.</p>
+  <p id="foot-1">Files are downloaded from the developers' official sources. We do not host any files.</p>
+  <p id="foot-2">PS5 entries require a jailbroken console and your own legally obtained game files.</p>
 </footer>
 
 <script src="app.js"></script>
