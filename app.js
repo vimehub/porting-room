@@ -10,6 +10,11 @@ let activeGenre = "";
 let query = "";
 const expandedSections = new Set();
 let lastMobile = null;
+let lang = "id";
+try { lang = localStorage.getItem("pr-lang") || "id"; } catch (e) { lang = "id"; }
+if (lang !== "id" && lang !== "en") lang = "id";
+let openSlug = null;
+let statsCache = { total: 0, withPorts: 0, totalPorts: 0 };
 
 const KIND_LABELS = { games: "Game", emulators: "Emulator", apps: "Aplikasi", tools: "Perkakas" };
 function kindOf(g) { return KIND_LABELS[g.kind] ? g.kind : "games"; }
@@ -52,6 +57,140 @@ function genreListOf(g) {
 }
 function genreIcon(label) { return GENRE_ICONS[label] || "bi-tag"; }
 
+const STR = {
+  id: {
+    searchPh: "Cari game, emulator, aplikasi…",
+    all: "Semua",
+    allKinds: "Semua Jenis",
+    allGenres: "Semua Genre",
+    added: "Terakhir Ditambahkan",
+    popular: "Populer",
+    popularNote: "Urutan Populer: game dari sheet diurutkan menurut kunjungan, game katalog diurutkan menurut jumlah port.",
+    updated: "Terakhir Diperbarui",
+    allEntries: "Semua Entri",
+    noResults: "Tidak ada game yang cocok.",
+    portWord: "Port",
+    noPort: "Belum ada port",
+    more: (n) => `Lihat Selengkapnya (${n} lagi)`,
+    less: "Tutup",
+    stats: (a, b, c) => `${a} Entri · ${b} dengan Port · ${c} Port · 100% Gratis`,
+    tagline: "Classic Games. Reborn for Android, PC & PS5.",
+    platform: "Platform",
+    kind: "Jenis",
+    year: "Tahun",
+    genre: "Genre",
+    available: "Tersedia di",
+    portCount: "Jumlah Port",
+    needs: "Kebutuhan",
+    portsTitle: "Port Tersedia",
+    videoTitle: "Video Gameplay",
+    previewsTitle: "Preview",
+    noPorts: "Belum ada tautan unduhan untuk game ini.",
+    download: "Unduh",
+    sourceGh: "Sumber: GitHub",
+    sourceDev: "Sumber: Situs developer",
+    noticeGame: "<strong>Hanya PS5 (Jailbreak).</strong> Butuh PS5 yang sudah di-jailbreak. Port ini tidak menyertakan file game — bawa file game sendiri yang diperoleh secara legal. Tidak ada file yang di-host di sini.",
+    noticeOther: "<strong>Hanya PS5 (Jailbreak).</strong> Butuh PS5 yang sudah di-jailbreak. Tidak ada file yang di-host di sini.",
+    foot1: "Files are downloaded from the developers' official sources. We do not host any files.",
+    foot2: "PS5 entries require a jailbroken console and your own legally obtained game files.",
+    loading: "Memuat katalog…",
+    loadFail: "Gagal memuat katalog.",
+  },
+  en: {
+    searchPh: "Search games, emulators, apps…",
+    all: "All",
+    allKinds: "All Types",
+    allGenres: "All Genres",
+    added: "Recently Added",
+    popular: "Popular",
+    popularNote: "Popular order: sheet games by visits, catalog games by port count.",
+    updated: "Recently Updated",
+    allEntries: "All Entries",
+    noResults: "No matching games.",
+    portWord: "Port",
+    noPort: "No ports yet",
+    more: (n) => `Show More (${n} more)`,
+    less: "Show Less",
+    stats: (a, b, c) => `${a} Entries · ${b} with Ports · ${c} Ports · 100% Free`,
+    tagline: "Classic Games. Reborn for Android, PC & PS5.",
+    platform: "Platform",
+    kind: "Type",
+    year: "Year",
+    genre: "Genre",
+    available: "Available on",
+    portCount: "Port Count",
+    needs: "Requirements",
+    portsTitle: "Available Ports",
+    videoTitle: "Gameplay Video",
+    previewsTitle: "Previews",
+    noPorts: "No download links for this game yet.",
+    download: "Download",
+    sourceGh: "Source: GitHub",
+    sourceDev: "Source: Developer site",
+    noticeGame: "<strong>PS5 (Jailbreak) only.</strong> Requires a jailbroken PS5. This port does not include game files — bring your own legally obtained game files. No files are hosted here.",
+    noticeOther: "<strong>PS5 (Jailbreak) only.</strong> Requires a jailbroken PS5. No files are hosted here.",
+    foot1: "Files are downloaded from the developers' official sources. We do not host any files.",
+    foot2: "PS5 entries require a jailbroken console and your own legally obtained game files.",
+    loading: "Loading catalog…",
+    loadFail: "Failed to load catalog.",
+  },
+};
+const KIND_LABELS_EN = { games: "Game", emulators: "Emulator", apps: "App", tools: "Tool" };
+function t(key, ...args) {
+  const dict = STR[lang] || STR.id;
+  let v = dict[key];
+  if (v === undefined) v = STR.id[key];
+  if (v === undefined) return key;
+  return typeof v === "function" ? v(...args) : v;
+}
+function kindLabel(k) {
+  const labels = lang === "en" ? KIND_LABELS_EN : KIND_LABELS;
+  return labels[k] || labels.games;
+}
+function idDescription(desc) {
+  desc = String(desc || "").trim();
+  if (!desc) return "";
+  const m = desc.match(/^(.*?\.)\s+([\s\S]*)$/);
+  if (!m) return desc;
+  let rest = m[2];
+  rest = rest.replace(/has 0 native ports\./g, "belum memiliki port native.");
+  rest = rest.replace(/has 1 native port\./g, "memiliki 1 port native.");
+  rest = rest.replace(/has (\d+) native ports\./g, "memiliki $1 port native.");
+  rest = rest.replace(/playable on (.+)\./g, "Dapat dimainkan di $1.");
+  return (m[1] + " " + rest).trim();
+}
+function descFor(g) {
+  const raw = g.description || "";
+  if (lang === "en" || !raw) return raw;
+  return idDescription(raw);
+}
+function renderStats() {
+  $("stats").textContent = t("stats", statsCache.total, statsCache.withPorts, statsCache.totalPorts);
+}
+function applyLang() {
+  document.documentElement.lang = lang;
+  try { localStorage.setItem("pr-lang", lang); } catch (e) { /* ignore */ }
+  $("tagline").textContent = t("tagline");
+  $("search").placeholder = t("searchPh");
+  $("h-added").textContent = t("added");
+  $("h-popular").textContent = t("popular");
+  $("popular-note").textContent = t("popularNote");
+  $("h-updated").textContent = t("updated");
+  $("h-all-label").textContent = t("allEntries");
+  $("no-results").textContent = t("noResults");
+  $("foot-1").textContent = t("foot1");
+  $("foot-2").textContent = t("foot2");
+  $("lang-id").classList.toggle("on", lang === "id");
+  $("lang-en").classList.toggle("on", lang === "en");
+  renderStats();
+  renderPlatformChips();
+  renderTypeChips();
+  renderGenreChips();
+  renderSections();
+  applyFilter();
+  if (openSlug) openDetail(openSlug);
+}
+
 function esc(s) {
   return String(s == null ? "" : s)
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -75,14 +214,14 @@ function coverHtml(g, cls) {
 }
 
 function portBadge(g) {
-  if (g.port_count > 0) return `<span class="badge">${g.port_count} Port</span>`;
-  return `<span class="badge muted">Belum ada port</span>`;
+  if (g.port_count > 0) return `<span class="badge">${g.port_count} ${esc(t("portWord"))}</span>`;
+  return `<span class="badge muted">${esc(t("noPort"))}</span>`;
 }
 
 function kindBadge(g) {
   const k = kindOf(g);
   if (k === "games") return "";
-  return ` <span class="badge kind">${esc(KIND_LABELS[k])}</span>`;
+  return ` <span class="badge kind">${esc(kindLabel(k))}</span>`;
 }
 
 function cardHtml(g) {
@@ -108,45 +247,54 @@ function renderInto(el, games) {
   });
 }
 
-function descHtml(desc) {
+function descHtml(g) {
+  const desc = descFor(g);
   if (!desc) return "";
   return esc(desc).split("|||").map((p) => `<p>${p.trim()}</p>`).join("");
 }
 
 function portsHtml(g) {
   const ports = (g.ports || []).filter((p) => p.url);
-  if (!ports.length) return "<p>Belum ada tautan unduhan untuk game ini.</p>";
+  if (!ports.length) return `<p>${esc(t("noPorts"))}</p>`;
   return ports.map((p) => {
     const isGh = /github\.com/i.test(p.url);
-    const label = isGh ? "Sumber: GitHub" : "Sumber: Situs developer";
+    const label = isGh ? t("sourceGh") : t("sourceDev");
     return `<div class="port">
       <div><strong>${esc(p.name)}</strong><span class="meta"> · ${esc(p.platform || "")}</span></div>
-      <a class="btn" href="${esc(p.url)}" target="_blank" rel="noopener">Unduh</a>
+      <a class="btn" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(t("download"))}</a>
       <span class="src">${label}</span>
     </div>`;
   }).join("");
 }
 
+function videoHtml(g) {
+  const vids = (g.videos || []).filter(Boolean);
+  if (!vids.length) return "";
+  const thumbs = vids.length > 1
+    ? `<div class="vthumbs">${vids.map((v, i) => `<button class="vthumb${i === 0 ? " on" : ""}" data-vid="${esc(v)}" aria-label="Video ${i + 1}"><img src="https://i.ytimg.com/vi/${esc(v)}/mqdefault.jpg" alt="" loading="lazy" referrerpolicy="no-referrer"></button>`).join("")}</div>`
+    : "";
+  return `<h3>${esc(t("videoTitle"))}</h3><div class="video"><iframe id="modal-video" src="https://www.youtube.com/embed/${esc(vids[0])}" allowfullscreen referrerpolicy="no-referrer"></iframe></div>${thumbs}`;
+}
+
 function openDetail(slug) {
   const g = ALL.find((x) => x.slug === slug);
   if (!g) return;
+  openSlug = slug;
   const info = [
-    ["Platform", g.platform],
-    ["Jenis", KIND_LABELS[kindOf(g)]],
-    ["Tahun", g.year],
-    ["Genre", g.genre],
-    ["Tersedia di", (g.platforms || []).join(", ")],
-    ["Jumlah Port", g.port_count],
-    ["Kebutuhan", g.needs],
+    [t("platform"), g.platform],
+    [t("kind"), kindLabel(kindOf(g))],
+    [t("year"), g.year],
+    [t("genre"), g.genre],
+    [t("available"), (g.platforms || []).join(", ")],
+    [t("portCount"), g.port_count],
+    [t("needs"), g.needs],
   ].filter(([, v]) => v !== null && v !== undefined && v !== "");
   const notice = !g.jailbreak ? "" : kindOf(g) === "games"
-    ? `<p class="notice"><strong>Hanya PS5 (Jailbreak).</strong> Butuh PS5 yang sudah di-jailbreak. Port ini tidak menyertakan file game — bawa file game sendiri yang diperoleh secara legal. Tidak ada file yang di-host di sini.</p>`
-    : `<p class="notice"><strong>Hanya PS5 (Jailbreak).</strong> Butuh PS5 yang sudah di-jailbreak. Tidak ada file yang di-host di sini.</p>`;
-  const video = (g.videos && g.videos.length)
-    ? `<h3>Video Gameplay</h3><div class="video"><iframe src="https://www.youtube.com/embed/${esc(g.videos[0])}" allowfullscreen referrerpolicy="no-referrer"></iframe></div>`
-    : "";
+    ? `<p class="notice">${t("noticeGame")}</p>`
+    : `<p class="notice">${t("noticeOther")}</p>`;
+  const video = videoHtml(g);
   const previews = (g.previews && g.previews.length)
-    ? `<h3>Preview</h3><div class="previews">${g.previews.map((u) => `<img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer">`).join("")}</div>`
+    ? `<h3>${esc(t("previewsTitle"))}</h3><div class="previews">${g.previews.map((u) => `<img src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer">`).join("")}</div>`
     : "";
   $("modal-body").innerHTML = `
     <div class="detail-head">
@@ -157,16 +305,25 @@ function openDetail(slug) {
       </div>
     </div>
     ${notice}
-    ${descHtml(g.description)}
-    <h3>Port Tersedia</h3>
+    ${descHtml(g)}
+    <h3>${esc(t("portsTitle"))}</h3>
     ${portsHtml(g)}
     ${video}
     ${previews}`;
+  $("modal-body").querySelectorAll(".vthumb").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const frame = $("modal-video");
+      if (frame) frame.src = "https://www.youtube.com/embed/" + btn.dataset.vid;
+      $("modal-body").querySelectorAll(".vthumb").forEach((b) => b.classList.remove("on"));
+      btn.classList.add("on");
+    });
+  });
   $("modal-backdrop").hidden = false;
   document.body.style.overflow = "hidden";
 }
 
 function closeDetail() {
+  openSlug = null;
   $("modal-backdrop").hidden = true;
   document.body.style.overflow = "";
 }
@@ -179,8 +336,8 @@ function renderPlatformChips() {
   });
   const platforms = [...counts.entries()].sort((a, b) => b[1] - a[1]);
   const wrap = $("platform-chips");
-  wrap.innerHTML = `<button class="chip on" data-p="">Semua</button>` +
-    platforms.map(([p, n]) => `<button class="chip" data-p="${esc(p)}">${esc(p)} (${n})</button>`).join("");
+  wrap.innerHTML = `<button class="chip${activePlatform === "" ? " on" : ""}" data-p="">${esc(t("all"))}</button>` +
+    platforms.map(([p, n]) => `<button class="chip${activePlatform === p ? " on" : ""}" data-p="${esc(p)}">${esc(p)} (${n})</button>`).join("");
   wrap.querySelectorAll(".chip").forEach((btn) => {
     btn.addEventListener("click", () => {
       wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("on"));
@@ -199,8 +356,8 @@ function renderTypeChips() {
   });
   const order = ["games", "emulators", "apps", "tools"];
   const wrap = $("type-chips");
-  wrap.innerHTML = `<button class="chip on" data-k="">Semua Jenis</button>` +
-    order.filter((k) => counts.has(k)).map((k) => `<button class="chip" data-k="${k}">${esc(KIND_LABELS[k])} (${counts.get(k)})</button>`).join("");
+  wrap.innerHTML = `<button class="chip${activeKind === "" ? " on" : ""}" data-k="">${esc(t("allKinds"))}</button>` +
+    order.filter((k) => counts.has(k)).map((k) => `<button class="chip${activeKind === k ? " on" : ""}" data-k="${k}">${esc(kindLabel(k))} (${counts.get(k)})</button>`).join("");
   wrap.querySelectorAll(".chip").forEach((btn) => {
     btn.addEventListener("click", () => {
       wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("on"));
@@ -219,8 +376,8 @@ function renderGenreChips() {
   const genres = [...counts.entries()].filter(([, n]) => n >= 4)
     .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 16);
   const wrap = $("genre-chips");
-  wrap.innerHTML = `<button class="chip on" data-g="">Semua Genre</button>` +
-    genres.map(([label, n]) => `<button class="chip" data-g="${esc(label)}"><i class="bi ${genreIcon(label)}"></i>${esc(label)} (${n})</button>`).join("");
+  wrap.innerHTML = `<button class="chip${activeGenre === "" ? " on" : ""}" data-g="">${esc(t("allGenres"))}</button>` +
+    genres.map(([label, n]) => `<button class="chip${activeGenre === label ? " on" : ""}" data-g="${esc(label)}"><i class="bi ${genreIcon(label)}"></i>${esc(label)} (${n})</button>`).join("");
   wrap.querySelectorAll(".chip").forEach((btn) => {
     btn.addEventListener("click", () => {
       wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("on"));
@@ -265,8 +422,8 @@ function renderSection(def) {
   if (!isMobileView() || list.length <= MOBILE_CAP) { btn.hidden = true; return; }
   btn.hidden = false;
   btn.textContent = expandedSections.has(def.key)
-    ? "Tutup"
-    : `Lihat Selengkapnya (${list.length - MOBILE_CAP} lagi)`;
+    ? t("less")
+    : t("more", list.length - MOBILE_CAP);
 }
 function renderSections() {
   const byAdded = ALL.filter((g) => g.dateAdded)
@@ -289,9 +446,11 @@ async function main() {
   const res = await fetch("games.json");
   const data = await res.json();
   ALL = (data.games || []).sort(byName);
-  const withPorts = ALL.filter((g) => g.port_count > 0).length;
-  const totalPorts = ALL.reduce((n, g) => n + (g.port_count || 0), 0);
-  $("stats").textContent = `${ALL.length} Entri · ${withPorts} dengan Port · ${totalPorts} Port · 100% Gratis`;
+  statsCache = {
+    total: ALL.length,
+    withPorts: ALL.filter((g) => g.port_count > 0).length,
+    totalPorts: ALL.reduce((n, g) => n + (g.port_count || 0), 0),
+  };
   renderPlatformChips();
   renderTypeChips();
   renderGenreChips();
@@ -308,6 +467,9 @@ async function main() {
     const m = isMobileView();
     if (m !== lastMobile) { lastMobile = m; renderSections(); }
   });
+  $("lang-id").addEventListener("click", () => { lang = "id"; applyLang(); });
+  $("lang-en").addEventListener("click", () => { lang = "en"; applyLang(); });
+  applyLang();
   applyFilter();
   $("search").addEventListener("input", (e) => {
     query = norm(e.target.value.trim());
@@ -323,5 +485,5 @@ async function main() {
 }
 
 main().catch(() => {
-  $("stats").textContent = "Gagal memuat katalog.";
+  $("stats").textContent = t("loadFail");
 });
