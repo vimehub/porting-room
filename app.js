@@ -6,10 +6,51 @@ const $ = (id) => document.getElementById(id);
 let ALL = [];
 let activePlatform = "";
 let activeKind = "";
+let activeGenre = "";
 let query = "";
+const expandedSections = new Set();
+let lastMobile = null;
 
 const KIND_LABELS = { games: "Game", emulators: "Emulator", apps: "Aplikasi", tools: "Perkakas" };
 function kindOf(g) { return KIND_LABELS[g.kind] ? g.kind : "games"; }
+
+const GENRE_DROP = new Set(["free to play", "early access", "casual"]);
+const GENRE_CANON = {
+  "role-playing": "RPG",
+  "rpg": "RPG",
+  "construction and management simulation": "Simulation",
+  "life simulation": "Simulation",
+  "flight simulator": "Simulation",
+  "simulation": "Simulation",
+};
+const GENRE_ICONS = {
+  "Action": "bi-lightning-charge",
+  "Shooter": "bi-crosshair",
+  "RPG": "bi-gem",
+  "Strategy": "bi-diagram-3",
+  "Platform": "bi-joystick",
+  "Adventure": "bi-compass",
+  "Racing": "bi-speedometer2",
+  "Horror": "bi-moon-stars",
+  "Fighting": "bi-controller",
+  "Beat 'em Up": "bi-hammer",
+  "Puzzle": "bi-puzzle",
+  "Simulation": "bi-gear",
+  "Indie": "bi-stars",
+  "Sports": "bi-trophy",
+  "Sandbox": "bi-box",
+};
+function genreListOf(g) {
+  const out = [];
+  String(g.genre || "").split(",").forEach((part) => {
+    const key = part.trim().toLowerCase();
+    if (!key || GENRE_DROP.has(key)) return;
+    const label = GENRE_CANON[key] || part.trim();
+    if (label && !out.includes(label)) out.push(label);
+  });
+  return out;
+}
+function genreIcon(label) { return GENRE_ICONS[label] || "bi-tag"; }
 
 function esc(s) {
   return String(s == null ? "" : s)
@@ -170,14 +211,35 @@ function renderTypeChips() {
   });
 }
 
+function renderGenreChips() {
+  const counts = new Map();
+  ALL.forEach((g) => {
+    genreListOf(g).forEach((label) => counts.set(label, (counts.get(label) || 0) + 1));
+  });
+  const genres = [...counts.entries()].filter(([, n]) => n >= 4)
+    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1)).slice(0, 16);
+  const wrap = $("genre-chips");
+  wrap.innerHTML = `<button class="chip on" data-g="">Semua Genre</button>` +
+    genres.map(([label, n]) => `<button class="chip" data-g="${esc(label)}"><i class="bi ${genreIcon(label)}"></i>${esc(label)} (${n})</button>`).join("");
+  wrap.querySelectorAll(".chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("on"));
+      btn.classList.add("on");
+      activeGenre = btn.dataset.g;
+      applyFilter();
+    });
+  });
+}
+
 function applyFilter() {
-  const filtering = query !== "" || activePlatform !== "" || activeKind !== "";
+  const filtering = query !== "" || activePlatform !== "" || activeKind !== "" || activeGenre !== "";
   ["sec-added", "sec-popular", "sec-updated"].forEach((id) => {
     $(id).style.display = filtering ? "none" : "";
   });
   const list = ALL.filter((g) => {
     if (activePlatform && (g.platform || "Others") !== activePlatform) return false;
     if (activeKind && kindOf(g) !== activeKind) return false;
+    if (activeGenre && !genreListOf(g).includes(activeGenre)) return false;
     if (query && !norm(g.name).includes(query)) return false;
     return true;
   });
@@ -186,6 +248,26 @@ function applyFilter() {
   renderInto($("game-list"), list);
 }
 
+const SECTION_DEFS = [
+  { key: "added", listId: "last-added-list", moreId: "more-added" },
+  { key: "popular", listId: "popular-list", moreId: "more-popular" },
+  { key: "updated", listId: "last-updated-list", moreId: "more-updated" },
+];
+const MOBILE_CAP = 4;
+let sectionLists = {};
+function isMobileView() { return window.matchMedia("(max-width: 560px)").matches; }
+function renderSection(def) {
+  const list = sectionLists[def.key] || [];
+  const collapsed = isMobileView() && !expandedSections.has(def.key);
+  renderInto($(def.listId), collapsed ? list.slice(0, MOBILE_CAP) : list);
+  const btn = $(def.moreId);
+  if (!btn) return;
+  if (!isMobileView() || list.length <= MOBILE_CAP) { btn.hidden = true; return; }
+  btn.hidden = false;
+  btn.textContent = expandedSections.has(def.key)
+    ? "Tutup"
+    : `Lihat Selengkapnya (${list.length - MOBILE_CAP} lagi)`;
+}
 function renderSections() {
   const byAdded = ALL.filter((g) => g.dateAdded)
     .sort((a, b) => b.dateAdded.localeCompare(a.dateAdded)).slice(0, 12);
@@ -195,9 +277,12 @@ function renderSections() {
     .sort((a, b) => b.visitas - a.visitas).slice(0, 10);
   const hisPopular = ALL.filter((g) => g.visitas == null && g.port_count > 0)
     .sort((a, b) => (b.port_count - a.port_count) || byName(a, b)).slice(0, 10);
-  renderInto($("last-added-list"), byAdded);
-  renderInto($("popular-list"), gapPopular.concat(hisPopular));
-  renderInto($("last-updated-list"), byUpdated);
+  sectionLists = {
+    added: byAdded,
+    popular: gapPopular.concat(hisPopular),
+    updated: byUpdated,
+  };
+  SECTION_DEFS.forEach(renderSection);
 }
 
 async function main() {
@@ -209,7 +294,20 @@ async function main() {
   $("stats").textContent = `${ALL.length} Entri · ${withPorts} dengan Port · ${totalPorts} Port · 100% Gratis`;
   renderPlatformChips();
   renderTypeChips();
+  renderGenreChips();
+  lastMobile = isMobileView();
   renderSections();
+  SECTION_DEFS.forEach((def) => {
+    $(def.moreId).addEventListener("click", () => {
+      if (expandedSections.has(def.key)) expandedSections.delete(def.key);
+      else expandedSections.add(def.key);
+      renderSection(def);
+    });
+  });
+  window.addEventListener("resize", () => {
+    const m = isMobileView();
+    if (m !== lastMobile) { lastMobile = m; renderSections(); }
+  });
   applyFilter();
   $("search").addEventListener("input", (e) => {
     query = norm(e.target.value.trim());
