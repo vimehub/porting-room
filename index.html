@@ -3,23 +3,24 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Porting Room — Android Game Ports</title>
-<meta name="description" content="Porting Room — katalog game klasik yang di-porting ke Android & PC. Info port, video gameplay, dan unduhan gratis dari sumber resmi developer.">
+<title>Porting Room — Android Game Ports &amp; PS5 Homebrew</title>
+<meta name="description" content="Porting Room — katalog game klasik yang di-porting ke Android & PC, plus game, emulator, dan aplikasi homebrew untuk PS5 (jailbreak). Info port, video gameplay, dan unduhan gratis dari sumber resmi developer.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="top">
   <div class="wrap">
     <h1>Porting Room</h1>
-    <p class="tagline">Classic Games. Reborn for Android &amp; PC.</p>
+    <p class="tagline">Classic Games. Reborn for Android, PC &amp; PS5.</p>
     <p class="stats" id="stats">Memuat katalog…</p>
   </div>
 </header>
 
 <main class="wrap">
   <div class="controls">
-    <input id="search" type="search" placeholder="Cari game…" autocomplete="off">
+    <input id="search" type="search" placeholder="Cari game, emulator, aplikasi…" autocomplete="off">
     <div class="chips" id="platform-chips"></div>
+    <div class="chips" id="type-chips"></div>
   </div>
 
   <section id="sec-added" class="section">
@@ -39,7 +40,7 @@
   </section>
 
   <section id="sec-all" class="section">
-    <h2>Semua Game <span class="count" id="all-count"></span></h2>
+    <h2>Semua Entri <span class="count" id="all-count"></span></h2>
     <div class="grid" id="game-list"></div>
     <p class="empty" id="no-results" hidden>Tidak ada game yang cocok.</p>
   </section>
@@ -54,6 +55,7 @@
 
 <footer class="wrap foot">
   <p>Files are downloaded from the developers' official sources. We do not host any files.</p>
+  <p>PS5 entries require a jailbroken console and your own legally obtained game files.</p>
 </footer>
 
 <script src="app.js"></script>
