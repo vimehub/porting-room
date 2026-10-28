@@ -15,6 +15,9 @@ try { lang = localStorage.getItem("pr-lang") || "id"; } catch (e) { lang = "id";
 if (lang !== "id" && lang !== "en") lang = "id";
 let openSlug = null;
 let statsCache = { total: 0, withPorts: 0, totalPorts: 0 };
+const ALL_PAGE = 24;
+let allShown = ALL_PAGE;
+let lastFilteredCount = 0;
 
 const KIND_LABELS = { games: "Game", emulators: "Emulator", apps: "Aplikasi", tools: "Perkakas" };
 function kindOf(g) { return KIND_LABELS[g.kind] ? g.kind : "games"; }
@@ -343,6 +346,7 @@ function renderPlatformChips() {
       wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("on"));
       btn.classList.add("on");
       activePlatform = btn.dataset.p;
+      allShown = ALL_PAGE;
       applyFilter();
     });
   });
@@ -363,6 +367,7 @@ function renderTypeChips() {
       wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("on"));
       btn.classList.add("on");
       activeKind = btn.dataset.k;
+      allShown = ALL_PAGE;
       applyFilter();
     });
   });
@@ -383,6 +388,7 @@ function renderGenreChips() {
       wrap.querySelectorAll(".chip").forEach((b) => b.classList.remove("on"));
       btn.classList.add("on");
       activeGenre = btn.dataset.g;
+      allShown = ALL_PAGE;
       applyFilter();
     });
   });
@@ -402,7 +408,18 @@ function applyFilter() {
   });
   $("all-count").textContent = `(${list.length})`;
   $("no-results").hidden = list.length > 0;
-  renderInto($("game-list"), list);
+  lastFilteredCount = list.length;
+  const shown = isMobileView() ? list.slice(0, allShown) : list;
+  renderInto($("game-list"), shown);
+  const moreBtn = $("more-all");
+  if (!isMobileView() || list.length <= ALL_PAGE) {
+    moreBtn.hidden = true;
+  } else {
+    moreBtn.hidden = false;
+    moreBtn.textContent = allShown >= list.length
+      ? t("less")
+      : t("more", list.length - allShown);
+  }
 }
 
 const SECTION_DEFS = [
@@ -463,9 +480,14 @@ async function main() {
       renderSection(def);
     });
   });
+  $("more-all").addEventListener("click", () => {
+    if (allShown >= lastFilteredCount) allShown = ALL_PAGE;
+    else allShown = Math.min(allShown + ALL_PAGE, lastFilteredCount);
+    applyFilter();
+  });
   window.addEventListener("resize", () => {
     const m = isMobileView();
-    if (m !== lastMobile) { lastMobile = m; renderSections(); }
+    if (m !== lastMobile) { lastMobile = m; renderSections(); applyFilter(); }
   });
   $("lang-id").addEventListener("click", () => { lang = "id"; applyLang(); });
   $("lang-en").addEventListener("click", () => { lang = "en"; applyLang(); });
@@ -473,6 +495,7 @@ async function main() {
   applyFilter();
   $("search").addEventListener("input", (e) => {
     query = norm(e.target.value.trim());
+    allShown = ALL_PAGE;
     applyFilter();
   });
   $("modal-close").addEventListener("click", closeDetail);
